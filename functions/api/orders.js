@@ -1,6 +1,5 @@
 // GET /api/orders
-// Cloudflare Pages Function — Workers runtime
-// Protected by admin password
+// Admin only — list all orders with product info
 export async function onRequestGet(context) {
   const { request, env } = context;
   const db = env.ABSTRACT_REALMS_DB;
@@ -14,7 +13,6 @@ export async function onRequestGet(context) {
   };
 
   try {
-    // Check password from query param
     const url = new URL(request.url);
     const password = url.searchParams.get('password');
 
@@ -25,24 +23,25 @@ export async function onRequestGet(context) {
       );
     }
 
-    // Fetch all orders with product and material names
     const { results } = await db.prepare(`
       SELECT
         o.id,
         o.customer_name,
-        o.customer_email,
+        o.phone,
         o.product_id,
-        o.material_id,
+        o.variant_id,
         o.quantity,
         o.image_url,
         o.total_price,
         o.status,
         o.created_at,
         p.name as product_name,
-        m.name as material_name
+        p.category as product_category,
+        v.material as variant_material,
+        v.shape as variant_shape
       FROM orders o
       LEFT JOIN products p ON o.product_id = p.id
-      LEFT JOIN materials m ON o.material_id = m.id
+      LEFT JOIN product_variants v ON o.variant_id = v.id
       ORDER BY o.created_at DESC
     `).all();
 
@@ -58,7 +57,6 @@ export async function onRequestGet(context) {
   }
 }
 
-// Handle CORS preflight
 export async function onRequestOptions() {
   return new Response(null, {
     headers: {

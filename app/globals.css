@@ -201,6 +201,16 @@ body {
   color: var(--error);
 }
 
+.badge-confirmed {
+  background: rgba(33, 150, 243, 0.2);
+  color: #42a5f5;
+}
+
+.badge-printing {
+  background: rgba(171, 71, 188, 0.2);
+  color: #ab47bc;
+}
+
 /* Messages */
 .message {
   padding: 1rem;
@@ -228,29 +238,7 @@ body {
   gap: 1.5rem;
 }
 
-/* Hero */
-.hero {
-  text-align: center;
-  padding: 4rem 2rem;
-}
 
-.hero h1 {
-  font-size: 3rem;
-  font-weight: 800;
-  margin-bottom: 1rem;
-  background: linear-gradient(135deg, var(--accent), #ff6b9d);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero p {
-  font-size: 1.25rem;
-  color: var(--text-secondary);
-  max-width: 600px;
-  margin: 0 auto 2rem;
-  line-height: 1.6;
-}
 
 /* Table */
 .table-container {
