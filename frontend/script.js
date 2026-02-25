@@ -3,7 +3,7 @@
    ───────────────────────────────────────────────────────────────────────────── */
 
 // Change this to your deployed worker URL after `wrangler deploy`
-const API_BASE = "https://merch-worker.YOUR_SUBDOMAIN.workers.dev";
+const API_BASE = "https://merch-worker.sarthakghosh2006.workers.dev";
 
 /* ─── Cart ─────────────────────────────────────────────────────────────────── */
 const Cart = (() => {
