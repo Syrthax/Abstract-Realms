@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout – Abstract Realms</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <style>
+    /* ── UPI payment section ─────────────────────────────────────────────── */
+    .upi-section {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 28px;
+      text-align: center;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .upi-section.visible { display: block; }
+
+    .qr-wrapper {
+      background: #fff;
+      border-radius: 12px;
+      display: inline-block;
+      padding: 12px;
+      margin: 20px 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+    .qr-wrapper img { display: block; border-radius: 6px; }
+
+    .upi-id-box {
+      background: var(--surface2);
+      border: 1.5px dashed var(--accent);
+      border-radius: 10px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 auto 20px;
+      max-width: 320px;
+    }
+    .upi-id-box .upi-id { font-family: monospace; font-size: 1rem; font-weight: 700; color: var(--accent-light); }
+    .copy-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 6px; padding: 4px 10px;
+      font-size: .78rem; cursor: pointer; transition: color .2s, border-color .2s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    .amount-badge {
+      font-size: 2rem; font-weight: 800;
+      color: var(--success); margin: 0 0 8px;
+    }
+
+    .paid-btn {
+      margin-top: 28px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border: none; color: #fff;
+      padding: 14px 36px; border-radius: 12px;
+      font-size: 1.1rem; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(34,197,94,.35);
+      transition: transform .15s, box-shadow .2s;
+    }
+    .paid-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(34,197,94,.45); }
+    .paid-btn:active { transform: scale(.97); }
+
+    .screenshot-zone {
+      border: 2px dashed var(--border); border-radius: 10px;
+      padding: 20px; text-align: center; cursor: pointer;
+      color: var(--muted); font-size: .88rem;
+      transition: border-color .2s;
+      margin: 20px 0 0;
+    }
+    .screenshot-zone:hover { border-color: var(--accent); }
+    .screenshot-zone.uploaded { border-color: var(--success); color: var(--success); }
+
+    .open-upi-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #1a73e8; color: #fff;
+      padding: 10px 22px; border-radius: 10px;
+      font-size: .9rem; font-weight: 600;
+      border: none; cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .open-upi-btn:hover { background: #1558b0; }
+
+    .order-form-wrap { max-width: 580px; margin: 0 auto; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">Abstract Realms</a>
+    <nav>
+      <a href="index.html">Shop</a>
+      <a href="cart.html" class="cart-link">
+        Cart
+        <span class="cart-badge" style="display:none">0</span>
+      </a>
+    </nav>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container">
+    <h2 style="margin-bottom:32px;text-align:center">Checkout</h2>
+
+    <!-- ── Step 1: Empty cart guard ─────────────────────────────────────── -->
+    <div id="empty-guard" class="empty-state hidden">
+      <div class="icon">🛒</div>
+      <p>Your cart is empty.</p>
+      <a href="index.html" class="btn btn-primary mt-4">Browse Products</a>
+    </div>
+
+    <!-- ── Step 1: Order form ────────────────────────────────────────────── -->
+    <div id="order-form-section" class="order-form-wrap hidden">
+      <div class="card">
+        <div class="card-body">
+          <h3 style="margin-bottom:20px">Contact Information</h3>
+
+          <div class="form-group">
+            <label for="name">Full Name *</label>
+            <input type="text" id="name" placeholder="Riya Sharma" required />
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number *</label>
+            <input type="tel" id="phone" placeholder="+91 98765 43210" required />
+          </div>
+          <div class="form-group">
+            <label for="email">Email (for order updates)</label>
+            <input type="email" id="email" placeholder="riya@example.com" />
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:24px 0" />
+
+          <h3 style="margin-bottom:16px">Your Items</h3>
+          <div id="checkout-items"></div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:24px 0" />
+
+          <div style="display:flex;justify-content:space-between;font-size:1.15rem;font-weight:700;margin-bottom:20px">
+            <span>Total</span>
+            <span id="form-total" class="text-accent">₹0</span>
+          </div>
+
+          <button id="place-order-btn" class="btn btn-primary btn-lg btn-block" onclick="placeOrder()">
+            Continue to Payment →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step 2: UPI Payment ───────────────────────────────────────────── -->
+    <div id="upi-section" class="upi-section">
+
+      <div style="display:inline-block;background:rgba(34,197,94,.12);border:1.5px solid var(--success);
+                  border-radius:30px;padding:6px 18px;font-size:.8rem;font-weight:700;
+                  color:var(--success);letter-spacing:.06em;margin-bottom:16px">
+        ✅ ORDER CREATED
+      </div>
+
+      <h2 style="margin-bottom:4px">Scan &amp; Pay</h2>
+      <p class="text-muted" style="font-size:.9rem;margin-bottom:4px">
+        Order ID: <span id="upi-order-id" style="font-family:monospace;color:var(--accent-light)"></span>
+      </p>
+
+      <div class="amount-badge" id="upi-amount">₹0</div>
+      <p class="text-muted" style="font-size:.85rem;margin-bottom:8px">Pay exactly this amount</p>
+
+      <!-- QR Code -->
+      <div class="qr-wrapper">
+        <img id="qr-img" src="" alt="UPI QR Code" width="260" height="260" />
+      </div>
+
+      <!-- UPI ID copy -->
+      <div class="upi-id-box">
+        <span class="upi-id" id="upi-id-text">sarthk@paytm</span>
+        <button class="copy-btn" onclick="copyUpiId()">Copy</button>
+      </div>
+
+      <!-- Open in UPI app -->
+      <div style="margin-bottom:8px">
+        <button class="open-upi-btn" id="open-upi-btn" onclick="openUpiApp()">
+          📱 Open UPI App
+        </button>
+      </div>
+      <p class="text-muted" style="font-size:.78rem;margin-bottom:0">
+        Works with GPay, PhonePe, Paytm, BHIM &amp; any UPI app
+      </p>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:24px 0" />
+
+      <!-- Screenshot upload (optional) -->
+      <p style="font-weight:600;margin-bottom:10px">Paid? Upload your screenshot (optional but recommended)</p>
+      <div id="screenshot-zone" class="screenshot-zone" onclick="document.getElementById('screenshot-input').click()">
+        <div style="font-size:1.8rem;margin-bottom:6px">📸</div>
+        <p>Click to upload payment screenshot</p>
+        <p style="font-size:.75rem;margin-top:4px">PNG / JPG — max 5 MB</p>
+        <input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="previewScreenshot(this)" />
+      </div>
+      <div id="screenshot-preview-wrap" style="display:none;margin-top:12px">
+        <img id="screenshot-preview" style="max-height:140px;border-radius:8px;margin:0 auto" alt="Payment screenshot" />
+      </div>
+
+      <button class="paid-btn" onclick="iHavePaid()" id="paid-btn">
+        ✅ I Have Paid
+      </button>
+
+      <p class="text-muted" style="font-size:.78rem;margin-top:16px">
+        After clicking, you'll be taken to your live order status page.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+// ── UPI config – update these values ────────────────────────────────────────
+const UPI_ID     = "sarthk@paytm";
+const STORE_NAME = "meowworlkd";
+
+let cartItems  = [];
+let currentOrderId   = null;
+let currentTotal     = 0;
+let screenshotFile   = null;
+
+// ── Initialise ───────────────────────────────────────────────────────────────
+function init() {
+  cartItems = Cart.getAll();
+  if (!cartItems.length) {
+    document.getElementById("empty-guard").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("order-form-section").classList.remove("hidden");
+  renderItems();
+  document.getElementById("form-total").textContent = formatINR(Cart.total());
+}
+
+function renderItems() {
+  document.getElementById("checkout-items").innerHTML = cartItems.map((item) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:1.6rem">${categoryEmoji(item.category)}</span>
+      <div style="flex:1">
+        <div style="font-weight:600">${item.product_name}</div>
+        ${item.variant_label ? `<div class="text-muted" style="font-size:.8rem">${item.variant_label}</div>` : ""}
+        ${item.image_url ? `<div style="font-size:.75rem;color:var(--accent-light)">Custom image ✓</div>` : ""}
+      </div>
+      <div style="text-align:right;white-space:nowrap">
+        <div class="text-muted" style="font-size:.82rem">${formatINR(item.price)} × ${item.quantity}</div>
+        <div style="font-weight:700">${formatINR(item.price * item.quantity)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ── Step 1: Create order → show UPI QR ───────────────────────────────────────
+async function placeOrder() {
+  const name  = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const email = document.getElementById("email").value.trim();
+
+  if (!name)  { toast("Enter your full name",    "error"); return; }
+  if (!phone) { toast("Enter your phone number", "error"); return; }
+
+  const btn = document.getElementById("place-order-btn");
+  btn.disabled    = true;
+  btn.textContent = "Creating order…";
+
+  try {
+    const item  = cartItems[0]; // primary item
+    const total = Cart.total();
+
+    const order = await apiFetch("/api/create-order", {
+      method: "POST",
+      body: JSON.stringify({
+        customer_name: name,
+        phone,
+        email:      email     || null,
+        product_id: item.product_id,
+        variant_id: item.variant_id || null,
+        quantity:   item.quantity,
+        image_url:  item.image_url  || null,
+        total_price: total,
+      }),
+    });
+
+    currentOrderId = order.id;
+    currentTotal   = total;
+
+    // Build UPI deep-link
+    const upiLink = buildUpiLink(order.id, total);
+
+    // Show UPI section
+    document.getElementById("order-form-section").style.display = "none";
+    const section = document.getElementById("upi-section");
+    section.classList.add("visible");
+
+    document.getElementById("upi-order-id").textContent = order.id;
+    document.getElementById("upi-amount").textContent   = formatINR(total);
+    document.getElementById("upi-id-text").textContent  = UPI_ID;
+    document.getElementById("open-upi-btn").setAttribute("data-upi", upiLink);
+
+    // Generate QR via free API
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&ecc=M&data=${encodeURIComponent(upiLink)}`;
+    document.getElementById("qr-img").src = qrUrl;
+
+  } catch (e) {
+    toast("Failed to create order: " + e.message, "error");
+    btn.disabled    = false;
+    btn.textContent = "Continue to Payment →";
+  }
+}
+
+// ── UPI link builder ─────────────────────────────────────────────────────────
+function buildUpiLink(orderId, amount) {
+  const params = new URLSearchParams({
+    pa: UPI_ID,
+    pn: STORE_NAME,
+    am: amount.toString(),
+    cu: "INR",
+    tn: `Order ${orderId}`,
+  });
+  return `upi://pay?${params.toString()}`;
+}
+
+// ── Open UPI app ─────────────────────────────────────────────────────────────
+function openUpiApp() {
+  const link = document.getElementById("open-upi-btn").getAttribute("data-upi");
+  if (link) window.location.href = link;
+}
+
+// ── Copy UPI ID ──────────────────────────────────────────────────────────────
+function copyUpiId() {
+  navigator.clipboard.writeText(UPI_ID).then(() => toast("UPI ID copied!", "success"));
+}
+
+// ── Screenshot preview ────────────────────────────────────────────────────────
+function previewScreenshot(input) {
+  if (!input.files[0]) return;
+  screenshotFile = input.files[0];
+  const reader   = new FileReader();
+  reader.onload  = (e) => {
+    document.getElementById("screenshot-preview").src = e.target.result;
+    document.getElementById("screenshot-preview-wrap").style.display = "block";
+    document.getElementById("screenshot-zone").classList.add("uploaded");
+    document.getElementById("screenshot-zone").querySelector("p").textContent = "Screenshot selected ✓";
+  };
+  reader.readAsDataURL(screenshotFile);
+}
+
+// ── "I Have Paid" ─────────────────────────────────────────────────────────────
+async function iHavePaid() {
+  if (!currentOrderId) { toast("No order found. Please refresh.", "error"); return; }
+
+  const btn = document.getElementById("paid-btn");
+  btn.disabled    = true;
+  btn.textContent = "Saving…";
+
+  try {
+    // Upload screenshot if provided
+    if (screenshotFile) {
+      if (screenshotFile.size > 5 * 1024 * 1024) {
+        toast("Screenshot must be under 5 MB", "error");
+        btn.disabled    = false;
+        btn.textContent = "✅ I Have Paid";
+        return;
+      }
+      showLoading();
+      const fd = new FormData();
+      fd.append("screenshot", screenshotFile);
+      fd.append("order_id",   currentOrderId);
+
+      const res  = await fetch(API_BASE + "/api/upload-payment-screenshot", { method: "POST", body: fd });
+      const data = await res.json();
+      hideLoading();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+    }
+
+    // Clear cart and redirect to order status page
+    Cart.clear();
+    window.location.href = `order.html?id=${currentOrderId}`;
+
+  } catch (e) {
+    hideLoading();
+    toast("Error: " + e.message, "error");
+    btn.disabled    = false;
+    btn.textContent = "✅ I Have Paid";
+  }
+}
+
+init();
+</script>
+</body>
+</html>

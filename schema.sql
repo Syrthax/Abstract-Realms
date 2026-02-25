@@ -1,5 +1,5 @@
--- Abstract Realms D1 Schema
--- College stall product system: mugs, keychains, magnets, badges
+-- Abstract Realms D1 Schema (Production)
+-- Run: wrangler d1 execute merch-db --file=schema.sql
 
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS product_variants;
@@ -32,12 +32,14 @@ CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
   customer_name TEXT NOT NULL,
   phone TEXT NOT NULL,
+  email TEXT,
   product_id TEXT NOT NULL,
   variant_id TEXT,
   quantity INTEGER NOT NULL DEFAULT 1,
   image_url TEXT,
   total_price INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'pending',
+  status TEXT NOT NULL DEFAULT 'PAYMENT_PENDING',
+  payment_screenshot_url TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (product_id) REFERENCES products(id),
   FOREIGN KEY (variant_id) REFERENCES product_variants(id)
