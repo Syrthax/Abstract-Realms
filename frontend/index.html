@@ -40,14 +40,22 @@
 <!-- ── Products ────────────────────────────────────────────────────────────── -->
 <section class="section" id="products">
   <div class="container">
-    <h2 style="margin-bottom:32px">Our Products</h2>
-    <div id="products-grid" class="products-grid">
-      <!-- skeleton -->
+
+    <!-- Prebuilt products -->
+    <h2 style="margin-bottom:8px">Prebuilt Products</h2>
+    <p class="text-muted" style="margin-bottom:24px;font-size:.9rem">Ready-made designs — add to cart and order instantly.</p>
+    <div id="prebuilt-grid" class="products-grid">
       <div class="card" style="height:340px">
         <div class="thumb"></div>
         <div class="card-body"><div class="spinner"></div></div>
       </div>
     </div>
+
+    <!-- Customisable products -->
+    <h2 style="margin-bottom:8px;margin-top:56px">Customisable Products</h2>
+    <p class="text-muted" style="margin-bottom:24px;font-size:.9rem">Upload your own design and we’ll print it for you.</p>
+    <div id="custom-grid" class="products-grid"></div>
+
   </div>
 </section>
 
@@ -74,7 +82,7 @@
 
       <!-- image upload -->
       <div class="form-group">
-        <label>Custom Image (optional)</label>
+        <label id="upload-label">Custom Image (optional)</label>
         <div id="upload-zone" class="upload-zone">
           <div class="icon">🖼️</div>
           <p>Click or drag &amp; drop your image here</p>
@@ -115,30 +123,46 @@ async function loadProducts() {
     products = await apiFetch("/api/products");
     renderProducts();
   } catch (e) {
-    document.getElementById("products-grid").innerHTML =
+    document.getElementById("prebuilt-grid").innerHTML =
       '<p class="text-muted">Failed to load products. Please try again.</p>';
+    document.getElementById("custom-grid").innerHTML = "";
   }
 }
 
 function renderProducts() {
-  const grid = document.getElementById("products-grid");
-  if (!products.length) {
-    grid.innerHTML = '<div class="empty-state"><div class="icon">🛍️</div><p>No products yet.</p></div>';
-    return;
-  }
-  grid.innerHTML = products.map((p) => `
-    <div class="card product-card" onclick="openModal('${p.id}')">
-      <div class="thumb" style="font-size:4rem;display:flex;align-items:center;justify-content:center">
-        ${categoryEmoji(p.category)}
-      </div>
+  const prebuilt   = products.filter(p => !p.is_customizable);
+  const customisable = products.filter(p => p.is_customizable);
+
+  const prebuiltGrid = document.getElementById("prebuilt-grid");
+  const customGrid   = document.getElementById("custom-grid");
+
+  prebuiltGrid.innerHTML = prebuilt.length
+    ? prebuilt.map(p => productCard(p, false)).join("")
+    : '<div class="empty-state"><div class="icon">🛒</div><p>No prebuilt products yet.</p></div>';
+
+  customGrid.innerHTML = customisable.length
+    ? customisable.map(p => productCard(p, true)).join("")
+    : '<div class="empty-state"><div class="icon">🎨</div><p>No customisable products yet.</p></div>';
+}
+
+function productCard(p, isCustom) {
+  const thumb = p.image_url
+    ? `<div class="thumb" style="background:url('${p.image_url}') center/cover no-repeat"></div>`
+    : `<div class="thumb" style="font-size:4rem;display:flex;align-items:center;justify-content:center">${categoryEmoji(p.category)}</div>`;
+  const btn = isCustom
+    ? `<button class="btn btn-primary btn-sm w-full mt-4" onclick="openModal('${p.id}')">Customize Now 🎨</button>`
+    : `<button class="btn btn-primary btn-sm w-full mt-4" onclick="openModal('${p.id}')">Buy Now</button>`;
+  return `
+    <div class="card product-card">
+      ${thumb}
       <div class="card-body">
         <span class="cat-badge">${p.category}</span>
         <h3>${p.name}</h3>
         <div class="price">From ${formatINR(p.base_price)}</div>
-        <button class="btn btn-primary btn-sm w-full mt-4">Customise</button>
+        ${btn}
       </div>
     </div>
-  `).join("");
+  `;
 }
 
 // ── Modal ───────────────────────────────────────────────────────────────────
@@ -152,6 +176,16 @@ function openModal(productId) {
   document.getElementById("modal-title").textContent = selectedProduct.name;
   document.getElementById("modal-qty").value = 1;
   document.getElementById("upload-preview").classList.add("hidden");
+
+  // Show image required indicator for customisable products
+  const uploadLabel = document.getElementById("upload-label");
+  if (selectedProduct.is_customizable) {
+    uploadLabel.textContent = "Your Custom Design (required) *";
+    uploadLabel.style.color = "var(--accent-light)";
+  } else {
+    uploadLabel.textContent = "Custom Image (optional)";
+    uploadLabel.style.color = "";
+  }
 
   // Variants
   const hasVariants = selectedProduct.variants && selectedProduct.variants.length > 0;
@@ -258,6 +292,10 @@ function addToCartFromModal() {
   const hasVariants = selectedProduct.variants?.length > 0;
   if (hasVariants && !variant) {
     toast("Please select a variant", "error"); return;
+  }
+  // For customisable products, image is required
+  if (selectedProduct.is_customizable && !uploadedImageUrl) {
+    toast("Please upload your custom image first", "error"); return;
   }
   const qty = parseInt(document.getElementById("modal-qty").value) || 1;
   const price = selectedProduct.base_price + (variant?.price_modifier ?? 0);

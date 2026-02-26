@@ -76,6 +76,7 @@ const STATUS_LABELS = {
   PAYMENT_RECEIVED: "Payment Received",
   IN_PROGRESS:      "In Progress",
   COMPLETED:        "Completed",
+  REJECTED:         "Rejected",
 };
 
 function statusEmailHtml(order, newStatus, env) {
@@ -145,15 +146,15 @@ export default {
 
       // ── POST /api/products ───────────────────────────────────────────────────
       if (path === "/api/products" && method === "POST") {
-        const { name, category, base_price, stock } = await request.json();
+        const { name, category, base_price, stock, image_url, is_customizable } = await request.json();
         if (!name || !category || base_price == null)
           return err("name, category, base_price required");
 
         const id = uid("prod_");
         await env.DB.prepare(
-          `INSERT INTO products (id, name, category, base_price, stock) VALUES (?, ?, ?, ?, ?)`
+          `INSERT INTO products (id, name, category, base_price, stock, image_url, is_customizable) VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
-          .bind(id, name, category, base_price, stock ?? 0)
+          .bind(id, name, category, base_price, stock ?? 0, image_url ?? null, is_customizable ? 1 : 0)
           .run();
 
         return json({ id, message: "Product created" }, 201);
@@ -265,7 +266,7 @@ export default {
 
         if (admin_key !== env.ADMIN_SECRET) return err("Unauthorized", 401);
 
-        const validStatuses = ["PAYMENT_PENDING", "PAYMENT_RECEIVED", "IN_PROGRESS", "COMPLETED"];
+        const validStatuses = ["PAYMENT_PENDING", "PAYMENT_RECEIVED", "IN_PROGRESS", "COMPLETED", "REJECTED"];
         if (!validStatuses.includes(status)) return err("Invalid status");
 
         const order = await env.DB.prepare(`SELECT * FROM orders WHERE id = ?`)
@@ -274,6 +275,13 @@ export default {
 
         await env.DB.prepare(`UPDATE orders SET status = ? WHERE id = ?`)
           .bind(status, id).run();
+
+        // ── Feature 6: Reduce stock when payment confirmed (only once, from PAYMENT_PENDING) ──
+        if (status === "PAYMENT_RECEIVED" && order.status === "PAYMENT_PENDING") {
+          await env.DB.prepare(
+            `UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?`
+          ).bind(order.quantity ?? 1, order.product_id).run();
+        }
 
         if (order.email) {
           await sendEmail({
@@ -284,6 +292,21 @@ export default {
         }
 
         return json({ success: true, status });
+      }
+
+      // ── GET /api/product-stats ─────────────────────────────────────────────
+      // Feature 4: Admin product dashboard
+      if (path === "/api/product-stats" && method === "GET") {
+        const { results } = await env.DB.prepare(
+          `SELECT p.id, p.name, p.image_url, p.stock, p.is_customizable, p.category,
+                  COUNT(o.id) AS total_sold
+           FROM products p
+           LEFT JOIN orders o ON o.product_id = p.id AND o.status != 'REJECTED'
+           WHERE p.is_active = 1
+           GROUP BY p.id
+           ORDER BY p.created_at DESC`
+        ).all();
+        return json(results);
       }
 
       return err("Not found", 404);

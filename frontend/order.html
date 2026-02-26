@@ -113,6 +113,7 @@ const STATUS_LABELS = {
   PAYMENT_RECEIVED: "Payment Received ✓",
   IN_PROGRESS:      "In Progress 🔨",
   COMPLETED:        "Completed ✅",
+  REJECTED:         "Rejected ❌",
 };
 
 let orderId = null;
@@ -148,6 +149,23 @@ function renderOrder(order) {
   badge.textContent = STATUS_LABELS[order.status] ?? order.status;
   badge.className = `status-badge status-${order.status}`;
 
+  // Hide timeline for REJECTED orders; show a rejection notice instead
+  const stepsEl = document.getElementById("status-steps");
+  const existingRejectNotice = document.getElementById("reject-notice");
+  if (order.status === "REJECTED") {
+    stepsEl.style.display = "none";
+    if (!existingRejectNotice) {
+      const notice = document.createElement("div");
+      notice.id = "reject-notice";
+      notice.style.cssText = "background:rgba(239,68,68,.1);border:1px solid #f87171;border-radius:10px;padding:16px 20px;margin:20px 0;color:#f87171;font-weight:600";
+      notice.textContent = "❌ Your order has been rejected. Please contact support or place a new order.";
+      stepsEl.parentNode.insertBefore(notice, stepsEl.nextSibling);
+    }
+  } else {
+    stepsEl.style.display = "";
+    if (existingRejectNotice) existingRejectNotice.remove();
+  }
+
   // Notify on status change
   if (lastStatus && lastStatus !== order.status) {
     toast(`Status updated: ${STATUS_LABELS[order.status] ?? order.status}`, "success");
@@ -178,11 +196,15 @@ function renderOrder(order) {
     document.getElementById("info-image").href = order.image_url;
   }
 
-  // Stop polling once completed
+  // Stop polling once completed or rejected
   if (order.status === "COMPLETED") {
     clearInterval(pollInterval);
     document.getElementById("poll-note").textContent =
       "Your order is complete! Thank you for shopping with us 🎉";
+  }
+  if (order.status === "REJECTED") {
+    clearInterval(pollInterval);
+    document.getElementById("poll-note").textContent = "";
   }
 }
 
