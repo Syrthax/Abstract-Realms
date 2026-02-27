@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product – Abstract Realms</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Product detail layout ────────────────────────────────────────────── */
+    .product-detail {
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    @media (max-width: 700px) {
+      .product-detail { grid-template-columns: 1fr; gap: 24px; }
+    }
+
+    /* ── Gallery ─────────────────────────────────────────────────────────── */
+    .gallery-main {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .gallery-main img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity .25s;
+    }
+    .gallery-main .no-img {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 6rem;
+    }
+    .gallery-thumbs {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .gallery-thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color .2s, opacity .2s;
+      opacity: .65;
+    }
+    .gallery-thumb.active, .gallery-thumb:hover {
+      border-color: var(--accent);
+      opacity: 1;
+    }
+    .gallery-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,.45);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .2s;
+    }
+    .gallery-nav:hover { background: rgba(0,0,0,.7); }
+    .gallery-nav.prev { left: 10px; }
+    .gallery-nav.next { right: 10px; }
+
+    /* ── Product info ─────────────────────────────────────────────────────── */
+    .product-info h1 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      margin: 0 0 8px;
+      line-height: 1.15;
+    }
+    .product-desc {
+      color: var(--muted);
+      font-size: .95rem;
+      line-height: 1.7;
+      margin: 12px 0 20px;
+    }
+    .price-block {
+      margin-bottom: 20px;
+    }
+    .price-base {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--accent-light);
+    }
+    .price-breakdown {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Customize toggle ─────────────────────────────────────────────────── */
+    .customize-toggle {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 16px 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color .2s, background .2s;
+      user-select: none;
+    }
+    .customize-toggle.active {
+      border-color: var(--accent);
+      background: rgba(99,102,241,.07);
+    }
+    .toggle-switch {
+      width: 42px;
+      height: 24px;
+      background: var(--border);
+      border-radius: 12px;
+      position: relative;
+      flex-shrink: 0;
+      transition: background .2s;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: left .2s;
+    }
+    .customize-toggle.active .toggle-switch { background: var(--accent); }
+    .customize-toggle.active .toggle-switch::after { left: 21px; }
+
+    /* ── Upload zone (in product page) ───────────────────────────────────── */
+    .upload-zone-inline {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      font-size: .88rem;
+      color: var(--muted);
+      margin: 12px 0;
+    }
+    .upload-zone-inline:hover { border-color: var(--accent); background: rgba(99,102,241,.04); }
+    .upload-zone-inline.uploaded { border-color: var(--success); color: var(--success); }
+    .upload-zone-inline img { max-height: 110px; border-radius: 6px; margin-top: 8px; }
+
+    /* ── Actions ─────────────────────────────────────────────────────────── */
+    .action-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .qty-input {
+      width: 70px;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* ── Skeleton loader ─────────────────────────────────────────────────── */
+    .skel {
+      background: var(--surface);
+      border-radius: 8px;
+      animation: pulse 1.5s infinite alternate;
+    }
+    @keyframes pulse { from { opacity: .5 } to { opacity: 1 } }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">Abstract Realms</a>
+    <nav>
+      <a href="index.html">Shop</a>
+      <a href="cart.html" class="cart-link">
+        Cart
+        <span class="cart-badge" style="display:none">0</span>
+      </a>
+    </nav>
+  </div>
+</nav>
+
+<!-- ── Breadcrumb ──────────────────────────────────────────────────────────── -->
+<div class="container" style="padding-top:20px">
+  <a href="index.html" style="color:var(--muted);font-size:.88rem;text-decoration:none">← Back to Shop</a>
+</div>
+
+<!-- ── Loading / error states ─────────────────────────────────────────────── -->
+<div id="page-loading" class="container" style="padding:60px 20px;text-align:center">
+  <div class="spinner" style="margin:0 auto 16px"></div>
+  <p class="text-muted">Loading product…</p>
+</div>
+
+<div id="page-error" class="container hidden" style="padding:60px 20px;text-align:center">
+  <div style="font-size:3rem">❌</div>
+  <h2 style="margin-top:16px">Product Not Found</h2>
+  <p class="text-muted">This product may have been removed.</p>
+  <a href="index.html" class="btn btn-primary" style="margin-top:20px">Back to Shop</a>
+</div>
+
+<!-- ── Product detail ──────────────────────────────────────────────────────── -->
+<div id="product-detail" class="product-detail hidden">
+
+  <!-- Left: Gallery -->
+  <div>
+    <div class="gallery-main" id="gallery-main">
+      <div class="no-img" id="gallery-no-img">🎁</div>
+    </div>
+    <div class="gallery-thumbs" id="gallery-thumbs"></div>
+  </div>
+
+  <!-- Right: Info -->
+  <div class="product-info">
+    <span class="cat-badge" id="info-category"></span>
+    <h1 id="info-name"></h1>
+    <p class="product-desc" id="info-desc" style="display:none"></p>
+
+    <!-- Variants -->
+    <div id="variant-section" class="hidden">
+      <div class="form-group">
+        <label>Material</label>
+        <div id="material-chips" class="variant-grid"></div>
+      </div>
+      <div class="form-group" id="shape-group">
+        <label>Shape</label>
+        <div id="shape-chips" class="variant-grid"></div>
+      </div>
+    </div>
+
+    <!-- Price -->
+    <div class="price-block">
+      <div class="price-base" id="info-price">₹0</div>
+      <div class="price-breakdown" id="price-breakdown"></div>
+    </div>
+
+    <!-- Customization toggle (only for customizable products) -->
+    <div id="customize-section" style="display:none">
+      <div class="customize-toggle" id="customize-toggle" onclick="toggleCustomize()">
+        <span style="font-size:1.3rem">🎨</span>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.95rem">Add Your Custom Design</div>
+          <div style="font-size:.8rem;color:var(--muted)" id="customize-fee-label"></div>
+        </div>
+        <div class="toggle-switch"></div>
+      </div>
+
+      <div id="upload-section" style="display:none">
+        <div class="upload-zone-inline" id="upload-zone" onclick="document.getElementById('design-input').click()">
+          <div style="font-size:1.8rem;margin-bottom:6px">🖼️</div>
+          <p>Click to upload your design</p>
+          <p style="font-size:.75rem;margin-top:4px">PNG / JPG / WEBP — max 5 MB</p>
+          <input type="file" id="design-input" accept="image/*" style="display:none" onchange="handleDesignUpload(this)" />
+        </div>
+        <div id="design-preview-wrap" style="display:none;text-align:center;margin-top:8px">
+          <img id="design-preview" style="max-height:120px;border-radius:8px" alt="Design preview" />
+          <p style="font-size:.78rem;color:var(--success);margin-top:4px">✓ Design uploaded</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quantity & Add to cart -->
+    <div class="action-row">
+      <input type="number" class="qty-input" id="qty" value="1" min="1" max="20" />
+      <button class="btn btn-primary btn-lg" onclick="addToCart()" style="flex:1">Add to Cart</button>
+    </div>
+    <p class="text-muted" style="font-size:.78rem;margin-top:10px">
+      Free delivery on orders above ₹499 &bull; Secure UPI payment
+    </p>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+let product = null;
+let uploadedDesignUrl = null;
+let isCustomizing = false;
+let selectedMaterial = null;
+let selectedShape = null;
+
+const productId = new URLSearchParams(window.location.search).get("id");
+
+// ── Load product ──────────────────────────────────────────────────────────────
+async function loadProduct() {
+  if (!productId) { showError(); return; }
+  try {
+    product = await apiFetch("/api/product?id=" + productId);
+    renderProduct();
+  } catch (e) {
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById("page-loading").classList.add("hidden");
+  document.getElementById("page-error").classList.remove("hidden");
+}
+
+function renderProduct() {
+  document.getElementById("page-loading").classList.add("hidden");
+  document.getElementById("product-detail").classList.remove("hidden");
+
+  document.title = product.name + " – Abstract Realms";
+  document.getElementById("info-name").textContent      = product.name;
+  document.getElementById("info-category").textContent  = product.category;
+
+  if (product.description) {
+    const d = document.getElementById("info-desc");
+    d.textContent    = product.description;
+    d.style.display  = "block";
+  }
+
+  // ── Gallery ──────────────────────────────────────────────────────────────
+  buildGallery();
+
+  // ── Variants ─────────────────────────────────────────────────────────────
+  const hasVariants = product.variants && product.variants.length > 0;
+  document.getElementById("variant-section").classList.toggle("hidden", !hasVariants);
+  if (hasVariants) {
+    const materials = [...new Set(product.variants.filter(v => v.material).map(v => v.material))];
+    const shapes    = [...new Set(product.variants.filter(v => v.shape).map(v => v.shape))];
+
+    document.getElementById("material-chips").innerHTML = materials.map(m =>
+      `<div class="variant-chip" data-material="${m}" onclick="selectMaterial('${m}')">${m}</div>`
+    ).join("");
+    document.getElementById("shape-chips").innerHTML = shapes.map(s =>
+      `<div class="variant-chip" data-shape="${s}" onclick="selectShape('${s}')">${s.replace(/_/g," ")}</div>`
+    ).join("");
+    document.getElementById("shape-group").classList.toggle("hidden", shapes.length === 0);
+  }
+
+  updatePrice();
+
+  // ── Customization toggle ─────────────────────────────────────────────────
+  if (product.is_customizable) {
+    const fee = product.customization_fee ?? 20;
+    document.getElementById("customize-section").style.display = "block";
+    document.getElementById("customize-fee-label").textContent =
+      `+${formatINR(fee)} customization fee`;
+  }
+
+  // ── Out of stock ─────────────────────────────────────────────────────────
+  if ((product.stock ?? 0) <= 0) {
+    const cartBtn = document.querySelector(".action-row button");
+    if (cartBtn) {
+      cartBtn.disabled    = true;
+      cartBtn.textContent = "Out of Stock";
+      cartBtn.style.cssText = "flex:1;background:rgba(156,163,175,.15);color:var(--muted);border:1px solid var(--border);cursor:not-allowed";
+    }
+    // Show badge next to price
+    const badge = document.createElement("span");
+    badge.textContent   = "Out of Stock";
+    badge.style.cssText = "background:#ef4444;color:#fff;font-size:.72rem;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:10px;vertical-align:middle";
+    const priceEl = document.getElementById("info-price");
+    if (priceEl) priceEl.after(badge);
+  }
+}
+
+// ── Gallery builder ───────────────────────────────────────────────────────────
+let galleryImages = [];
+let galleryIndex  = 0;
+
+function buildGallery() {
+  galleryImages = [];
+  if (product.cover_image_url)     galleryImages.push(product.cover_image_url);
+  // existing image_url fallback
+  if (product.image_url && product.image_url !== product.cover_image_url)
+    galleryImages.push(product.image_url);
+
+  if (product.gallery_images_json) {
+    try {
+      const parsed = JSON.parse(product.gallery_images_json);
+      if (Array.isArray(parsed)) galleryImages.push(...parsed);
+    } catch {}
+  }
+  // Deduplicate
+  galleryImages = [...new Set(galleryImages)];
+
+  const mainEl  = document.getElementById("gallery-main");
+  const noImg   = document.getElementById("gallery-no-img");
+  const thumbEl = document.getElementById("gallery-thumbs");
+
+  if (!galleryImages.length) {
+    noImg.textContent = categoryEmoji(product.category);
+    noImg.style.display = "flex";
+    return;
+  }
+  noImg.style.display = "none";
+
+  // Main img element
+  const img = document.createElement("img");
+  img.id    = "gallery-img";
+  img.src   = galleryImages[0];
+  img.alt   = product.name;
+  mainEl.insertBefore(img, noImg.nextSibling);
+
+  // Nav arrows (only if >1 image)
+  if (galleryImages.length > 1) {
+    const prev = document.createElement("button");
+    prev.className = "gallery-nav prev";
+    prev.innerHTML = "‹";
+    prev.onclick = () => changeGallery(-1);
+    const next = document.createElement("button");
+    next.className = "gallery-nav next";
+    next.innerHTML = "›";
+    next.onclick = () => changeGallery(1);
+    mainEl.appendChild(prev);
+    mainEl.appendChild(next);
+  }
+
+  // Thumbnails
+  thumbEl.innerHTML = galleryImages.map((url, i) =>
+    `<img src="${url}" class="gallery-thumb${i === 0 ? ' active' : ''}"
+          onclick="setGallery(${i})" alt="View ${i+1}" />`
+  ).join("");
+}
+
+function setGallery(idx) {
+  galleryIndex = idx;
+  const img = document.getElementById("gallery-img");
+  if (img) { img.style.opacity = "0"; setTimeout(() => { img.src = galleryImages[idx]; img.style.opacity = "1"; }, 150); }
+  document.querySelectorAll(".gallery-thumb").forEach((t, i) => t.classList.toggle("active", i === idx));
+}
+
+function changeGallery(dir) {
+  setGallery((galleryIndex + dir + galleryImages.length) % galleryImages.length);
+}
+
+// ── Variants ──────────────────────────────────────────────────────────────────
+function selectMaterial(m) {
+  selectedMaterial = m;
+  document.querySelectorAll("#material-chips .variant-chip").forEach(c =>
+    c.classList.toggle("selected", c.dataset.material === m));
+  updatePrice();
+}
+function selectShape(s) {
+  selectedShape = s;
+  document.querySelectorAll("#shape-chips .variant-chip").forEach(c =>
+    c.classList.toggle("selected", c.dataset.shape === s));
+  updatePrice();
+}
+function getSelectedVariant() {
+  if (!product?.variants?.length) return null;
+  return product.variants.find(v =>
+    (v.material === selectedMaterial || !v.material) &&
+    (v.shape === selectedShape || !v.shape)
+  ) || null;
+}
+
+// ── Price ─────────────────────────────────────────────────────────────────────
+function updatePrice() {
+  if (!product) return;
+  const variant   = getSelectedVariant();
+  const base      = product.base_price + (variant?.price_modifier ?? 0);
+  const custFee   = (isCustomizing && product.is_customizable) ? (product.customization_fee ?? 20) : 0;
+  const total     = base + custFee;
+
+  document.getElementById("info-price").textContent = formatINR(total);
+
+  let breakdown = "";
+  if (custFee > 0) {
+    breakdown = `Base ${formatINR(base)} + Customization ${formatINR(custFee)}`;
+  } else if (product.is_customizable) {
+    breakdown = `Base price (customization fee not applied)`;
+  }
+  const el = document.getElementById("price-breakdown");
+  el.textContent    = breakdown;
+  el.style.display  = breakdown ? "block" : "none";
+}
+
+// ── Customize toggle ──────────────────────────────────────────────────────────
+function toggleCustomize() {
+  isCustomizing = !isCustomizing;
+  document.getElementById("customize-toggle").classList.toggle("active", isCustomizing);
+  document.getElementById("upload-section").style.display = isCustomizing ? "block" : "none";
+  if (!isCustomizing) {
+    uploadedDesignUrl = null;
+    document.getElementById("design-preview-wrap").style.display = "none";
+    document.getElementById("upload-zone").classList.remove("uploaded");
+  }
+  updatePrice();
+}
+
+// ── Design upload ─────────────────────────────────────────────────────────────
+async function handleDesignUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast("Image must be under 5 MB", "error"); return; }
+
+  const preview = document.getElementById("design-preview");
+  preview.src = URL.createObjectURL(file);
+  document.getElementById("design-preview-wrap").style.display = "block";
+
+  try {
+    showLoading();
+    const fd = new FormData();
+    fd.append("image", file);
+    const res  = await fetch(API_BASE + "/api/upload-image", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    uploadedDesignUrl = data.url;
+    document.getElementById("upload-zone").classList.add("uploaded");
+    toast("Design uploaded!", "success");
+  } catch (e) {
+    toast("Upload failed: " + e.message, "error");
+    uploadedDesignUrl = null;
+  } finally {
+    hideLoading();
+  }
+}
+
+// ── Add to cart ───────────────────────────────────────────────────────────────
+function addToCart() {
+  if (!product) return;
+  if ((product.stock ?? 0) <= 0) { toast("This product is out of stock", "error"); return; }
+  const variant    = getSelectedVariant();
+  const hasVariants = product.variants?.length > 0;
+  if (hasVariants && !variant) { toast("Please select a variant", "error"); return; }
+  if (isCustomizing && !uploadedDesignUrl) { toast("Please upload your design first", "error"); return; }
+
+  const base    = product.base_price + (variant?.price_modifier ?? 0);
+  const custFee = isCustomizing ? (product.customization_fee ?? 20) : 0;
+  const price   = base + custFee;
+  const qty     = parseInt(document.getElementById("qty").value) || 1;
+  const variantLabel = variant
+    ? [variant.material, variant.shape].filter(Boolean).map(s => s.replace(/_/g," ")).join(" · ")
+    : "";
+
+  Cart.add({
+    product_id:    product.id,
+    product_name:  product.name,
+    category:      product.category,
+    variant_id:    variant?.id ?? null,
+    variant_label: variantLabel,
+    price,
+    image_url:     uploadedDesignUrl ?? null,
+    is_customized: isCustomizing ? 1 : 0,
+    customization_fee: custFee,
+  });
+
+  const items = Cart.getAll();
+  const idx = items.findIndex(i => i.product_id === product.id && i.variant_id === (variant?.id ?? null));
+  if (idx !== -1 && qty > 1) Cart.updateQty(idx, qty);
+
+  toast(`${product.name} added to cart!`, "success");
+}
+
+loadProduct();
+</script>
+</body>
+</html>

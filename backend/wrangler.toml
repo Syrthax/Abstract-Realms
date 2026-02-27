@@ -1,0 +1,11 @@
+name = "merch-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = "./frontend"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "merch-db"
+database_id = "45017b4f-a656-4281-8ae8-ed26893e2648"

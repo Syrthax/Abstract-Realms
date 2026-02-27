@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Status – Abstract Realms</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">Abstract Realms</a>
+    <nav>
+      <a href="index.html">Shop</a>
+      <a href="cart.html" class="cart-link">
+        Cart
+        <span class="cart-badge" style="display:none">0</span>
+      </a>
+    </nav>
+  </div>
+</nav>
+
+<div id="order-status-card" class="order-status-card">
+  <!-- Loading state -->
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <p class="text-muted mt-4">Fetching your order…</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="error-state" class="hidden">
+    <div style="font-size:3rem">❌</div>
+    <h2 style="margin-top:16px">Order Not Found</h2>
+    <p class="text-muted mt-4">The order ID is invalid or may have been removed.</p>
+    <a href="index.html" class="btn btn-primary mt-8">Back to Shop</a>
+  </div>
+
+  <!-- Order details -->
+  <div id="order-details" class="hidden">
+    <div style="font-size:2.5rem" id="order-icon">🎁</div>
+    <h2 style="margin-top:12px" id="order-title">Your Order</h2>
+    <p class="text-muted" id="order-id-label"></p>
+
+    <!-- Status badge -->
+    <span class="status-badge" id="status-badge">Loading…</span>
+
+    <!-- Status timeline -->
+    <div class="status-steps" id="status-steps">
+      <div class="step" data-status="PAYMENT_PENDING">
+        <div class="step-dot">💸</div>
+        <span class="step-label">Payment<br>Pending</span>
+      </div>
+      <div class="step" data-status="PAYMENT_RECEIVED">
+        <div class="step-dot">✓</div>
+        <span class="step-label">Payment<br>Received</span>
+      </div>
+      <div class="step" data-status="IN_PROGRESS">
+        <div class="step-dot">🔨</div>
+        <span class="step-label">In Progress</span>
+      </div>
+      <div class="step" data-status="COMPLETED">
+        <div class="step-dot">🎉</div>
+        <span class="step-label">Completed</span>
+      </div>
+    </div>
+
+    <!-- Order info table -->
+    <div style="text-align:left;margin-top:24px">
+      <div class="summary-line">
+        <span class="text-muted">Product</span>
+        <strong id="info-product"></strong>
+      </div>
+      <div class="summary-line">
+        <span class="text-muted">Variant</span>
+        <span id="info-variant">—</span>
+      </div>
+      <div class="summary-line">
+        <span class="text-muted">Quantity</span>
+        <span id="info-qty"></span>
+      </div>
+      <div class="summary-line">
+        <span class="text-muted">Amount Paid</span>
+        <strong id="info-total"></strong>
+      </div>
+      <div class="summary-line" id="order-type-row">
+        <span class="text-muted">Order Type</span>
+        <span id="info-order-type">Premade</span>
+      </div>
+      <div class="summary-line" id="cust-fee-row" style="display:none">
+        <span class="text-muted">Customization Fee</span>
+        <span id="info-cust-fee"></span>
+      </div>
+      <div class="summary-line" id="image-row" style="display:none">
+        <span class="text-muted">Custom Image</span>
+        <a id="info-image" href="#" target="_blank" style="color:var(--accent-light)">View →</a>
+      </div>
+      <div class="summary-line">
+        <span class="text-muted">Placed On</span>
+        <span id="info-date"></span>
+      </div>
+    </div>
+
+    <p class="text-muted mt-8" style="font-size:.82rem" id="poll-note">
+      This page polls for updates every 10 seconds.
+    </p>
+    <a id="invoice-btn" href="#" target="_blank"
+       class="btn btn-primary mt-4"
+       style="display:none;text-decoration:none">
+      📄 Download Invoice
+    </a>
+    <a href="index.html" class="btn btn-outline mt-4">Back to Shop</a>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+const STATUS_ORDER = ["PAYMENT_PENDING", "PAYMENT_RECEIVED", "IN_PROGRESS", "COMPLETED"];
+
+const STATUS_LABELS = {
+  PAYMENT_PENDING:  "Payment Pending",
+  PAYMENT_RECEIVED: "Payment Received ✓",
+  IN_PROGRESS:      "In Progress 🔨",
+  COMPLETED:        "Completed ✅",
+  REJECTED:         "Rejected ❌",
+};
+
+let orderId = null;
+let pollInterval = null;
+let lastStatus = null;
+
+function getOrderId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("id");
+}
+
+async function fetchOrder() {
+  try {
+    const order = await apiFetch(`/api/order-status?id=${orderId}`);
+    renderOrder(order);
+  } catch (e) {
+    clearInterval(pollInterval);
+    document.getElementById("loading-state").classList.add("hidden");
+    document.getElementById("error-state").classList.remove("hidden");
+  }
+}
+
+function renderOrder(order) {
+  document.getElementById("loading-state").classList.add("hidden");
+  document.getElementById("order-details").classList.remove("hidden");
+
+  document.getElementById("order-id-label").textContent = `Order #${order.id}`;
+  document.getElementById("order-icon").textContent = categoryEmoji(order.category);
+  document.getElementById("order-title").textContent = order.product_name;
+
+  // Status badge
+  const badge = document.getElementById("status-badge");
+  badge.textContent = STATUS_LABELS[order.status] ?? order.status;
+  badge.className = `status-badge status-${order.status}`;
+
+  // Hide timeline for REJECTED orders; show a rejection notice instead
+  const stepsEl = document.getElementById("status-steps");
+  const existingRejectNotice = document.getElementById("reject-notice");
+  if (order.status === "REJECTED") {
+    stepsEl.style.display = "none";
+    if (!existingRejectNotice) {
+      const notice = document.createElement("div");
+      notice.id = "reject-notice";
+      notice.style.cssText = "background:rgba(239,68,68,.1);border:1px solid #f87171;border-radius:10px;padding:16px 20px;margin:20px 0;color:#f87171;font-weight:600";
+      notice.textContent = "❌ Your order has been rejected. Please contact support or place a new order.";
+      stepsEl.parentNode.insertBefore(notice, stepsEl.nextSibling);
+    }
+  } else {
+    stepsEl.style.display = "";
+    if (existingRejectNotice) existingRejectNotice.remove();
+  }
+
+  // Notify on status change
+  if (lastStatus && lastStatus !== order.status) {
+    toast(`Status updated: ${STATUS_LABELS[order.status] ?? order.status}`, "success");
+  }
+  lastStatus = order.status;
+
+  // Timeline steps
+  const steps = document.querySelectorAll(".step");
+  const currentIdx = STATUS_ORDER.indexOf(order.status);
+  steps.forEach((step) => {
+    const stepStatus = step.dataset.status;
+    const stepIdx = STATUS_ORDER.indexOf(stepStatus);
+    step.classList.remove("active", "done");
+    if (stepIdx < currentIdx)      { step.classList.add("done"); }
+    else if (stepIdx === currentIdx) { step.classList.add("active"); }
+  });
+
+  // Info
+  document.getElementById("info-product").textContent = order.product_name;
+  const variantParts = [order.material, order.shape].filter(Boolean).map(s => s.replace(/_/g," "));
+  document.getElementById("info-variant").textContent = variantParts.length ? variantParts.join(" · ") : "—";
+  document.getElementById("info-qty").textContent = order.quantity;
+  document.getElementById("info-total").textContent = formatINR(order.total_price);
+  document.getElementById("info-date").textContent = new Date(order.created_at).toLocaleString("en-IN");
+
+  // Order type (Premade vs Customized) + customization fee
+  if (order.is_customized) {
+    document.getElementById("info-order-type").innerHTML =
+      '<span style="color:var(--accent-light);font-weight:600">🎨 Customized</span>';
+    const custFeeRow = document.getElementById("cust-fee-row");
+    custFeeRow.style.display = "flex";
+    // customization_fee is the fee stored; if not present, infer from total vs base
+    const custFee = order.customization_fee ?? null;
+    document.getElementById("info-cust-fee").textContent =
+      custFee != null ? formatINR(custFee) : "Included";
+  } else {
+    document.getElementById("info-order-type").textContent = "📦 Premade";
+  }
+
+  if (order.image_url) {
+    document.getElementById("image-row").style.display = "flex";
+    document.getElementById("info-image").href = order.image_url;
+  }
+
+  // Invoice download button
+  const invoiceBtn = document.getElementById("invoice-btn");
+  if (order.invoice_number) {
+    invoiceBtn.href = `${API_BASE}/api/invoice?id=${orderId}`;
+    invoiceBtn.style.display = "inline-block";
+  } else {
+    invoiceBtn.style.display = "none";
+  }
+
+  // Stop polling once completed or rejected
+  if (order.status === "COMPLETED") {
+    clearInterval(pollInterval);
+    document.getElementById("poll-note").textContent =
+      "Your order is complete! Thank you for shopping with us 🎉";
+  }
+  if (order.status === "REJECTED") {
+    clearInterval(pollInterval);
+    document.getElementById("poll-note").textContent = "";
+  }
+}
+
+// ── Start ────────────────────────────────────────────────────────────────────
+orderId = getOrderId();
+if (!orderId) {
+  document.getElementById("loading-state").classList.add("hidden");
+  document.getElementById("error-state").classList.remove("hidden");
+} else {
+  fetchOrder();
+  // Poll every 10 seconds
+  pollInterval = setInterval(fetchOrder, 10000);
+}
+</script>
+</body>
+</html>

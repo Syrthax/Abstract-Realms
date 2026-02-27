@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abstract Realms – Custom Merch</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<div style="background: #fef3c7; color: #92400e; padding: 16px; border: 1px solid #fcd34d; border-radius: 8px; margin-bottom: 16px;">
+  <strong>⚠️ Demo Website:</strong> This is a demo website. Visit <a href="https://github.com/Syrthax/Abstract-Realms" target="_blank" style="color: #b45309; text-decoration: underline;">GitHub Repository</a> to modify it your own way. Please do not make any payments here. All UPI IDs are dummy.
+</div>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container">
+    <span class="brand">Abstract Realms</span>
+    <nav>
+      <a href="index.html">Shop</a>
+      <a href="cart.html" class="cart-link">
+        Cart
+        <span class="cart-badge" style="display:none">0</span>
+      </a>
+    </nav>
+  </div>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <h1>Custom Merch, Made for You</h1>
+    <p>Upload your design on mugs, keychains, magnets and badges. Personalised &amp; printed just the way you like it.</p>
+    <a href="#products" class="btn btn-primary btn-lg">Browse Products</a>
+  </div>
+</section>
+
+<!-- ── Products ────────────────────────────────────────────────────────────── -->
+<section class="section" id="products">
+  <div class="container">
+
+    <!-- Prebuilt products -->
+    <h2 style="margin-bottom:8px">Prebuilt Products</h2>
+    <p class="text-muted" style="margin-bottom:24px;font-size:.9rem">Ready-made designs — add to cart and order instantly.</p>
+    <div id="prebuilt-grid" class="products-grid">
+      <div class="card" style="height:340px">
+        <div class="thumb"></div>
+        <div class="card-body"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Customisable products -->
+    <h2 style="margin-bottom:8px;margin-top:56px">Customisable Products</h2>
+    <p class="text-muted" style="margin-bottom:24px;font-size:.9rem">Upload your own design and we’ll print it for you.</p>
+    <div id="custom-grid" class="products-grid"></div>
+
+  </div>
+</section>
+
+<!-- ── Product modal ────────────────────────────────────────────────────────── -->
+<div id="product-modal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Product</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+
+    <div id="modal-body">
+      <!-- variant selection -->
+      <div id="variant-section" class="hidden">
+        <div class="form-group">
+          <label>Material</label>
+          <div id="material-chips" class="variant-grid"></div>
+        </div>
+        <div class="form-group" id="shape-group">
+          <label>Shape</label>
+          <div id="shape-chips" class="variant-grid"></div>
+        </div>
+      </div>
+
+      <!-- image upload -->
+      <div class="form-group">
+        <label id="upload-label">Custom Image (optional)</label>
+        <div id="upload-zone" class="upload-zone">
+          <div class="icon">🖼️</div>
+          <p>Click or drag &amp; drop your image here</p>
+          <p style="font-size:.8rem;margin-top:4px">PNG / JPG / WEBP — max 5 MB</p>
+          <input type="file" id="image-input" accept="image/*" style="display:none" />
+          <img id="upload-preview" class="upload-preview hidden" alt="preview" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="modal-qty" value="1" min="1" max="20" style="width:100px" />
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+        <div>
+          <div class="text-muted" style="font-size:.85rem">Price</div>
+          <div id="modal-price" style="font-size:1.5rem;font-weight:800;color:var(--accent-light)">₹0</div>
+        </div>
+        <button class="btn btn-primary" onclick="addToCartFromModal()">Add to Cart</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+let products = [];
+let selectedProduct = null;
+let uploadedImageUrl = null;
+let selectedMaterial = null;
+let selectedShape = null;
+
+// ── Fetch products ──────────────────────────────────────────────────────────
+async function loadProducts() {
+  try {
+    products = await apiFetch("/api/products");
+    renderProducts();
+  } catch (e) {
+    document.getElementById("prebuilt-grid").innerHTML =
+      '<p class="text-muted">Failed to load products. Please try again.</p>';
+    document.getElementById("custom-grid").innerHTML = "";
+  }
+}
+
+function renderProducts() {
+  const prebuilt   = products.filter(p => !p.is_customizable);
+  const customisable = products.filter(p => p.is_customizable);
+
+  const prebuiltGrid = document.getElementById("prebuilt-grid");
+  const customGrid   = document.getElementById("custom-grid");
+
+  prebuiltGrid.innerHTML = prebuilt.length
+    ? prebuilt.map(p => productCard(p, false)).join("")
+    : '<div class="empty-state"><div class="icon">🛒</div><p>No prebuilt products yet.</p></div>';
+
+  customGrid.innerHTML = customisable.length
+    ? customisable.map(p => productCard(p, true)).join("")
+    : '<div class="empty-state"><div class="icon">🎨</div><p>No customisable products yet.</p></div>';
+}
+
+function productCard(p, isCustom) {
+  const imgSrc = p.cover_image_url || p.image_url;
+  const thumb = imgSrc
+    ? `<div class="thumb" style="background:url('${imgSrc}') center/cover no-repeat"></div>`
+    : `<div class="thumb" style="font-size:4rem;display:flex;align-items:center;justify-content:center">${categoryEmoji(p.category)}</div>`;
+  const desc = p.description
+    ? `<p class="text-muted" style="font-size:.8rem;margin:4px 0 8px;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${p.description}</p>`
+    : "";
+  const outOfStock = (p.stock ?? 0) <= 0;
+  const btn = outOfStock
+    ? `<span class="btn btn-sm w-full mt-4" style="background:rgba(156,163,175,.15);color:var(--muted);border:1px solid var(--border);cursor:not-allowed;pointer-events:none">Out of Stock</span>`
+    : isCustom
+      ? `<a href="product.html?id=${p.id}" class="btn btn-primary btn-sm w-full mt-4">Customize Now 🎨</a>`
+      : `<a href="product.html?id=${p.id}" class="btn btn-primary btn-sm w-full mt-4">View &amp; Buy</a>`;
+  return `
+    <div class="card product-card">
+      ${outOfStock ? `<div style="position:absolute;top:10px;left:10px;background:#ef4444;color:#fff;font-size:.7rem;font-weight:700;padding:2px 10px;border-radius:20px;z-index:2">Out of Stock</div>` : ""}
+      ${thumb}
+      <div class="card-body">
+        <span class="cat-badge">${p.category}</span>
+        <h3>${p.name}</h3>
+        ${desc}
+        <div class="price">From ${formatINR(p.base_price)}</div>
+        ${btn}
+      </div>
+    </div>
+  `;
+}
+
+// ── Modal ───────────────────────────────────────────────────────────────────
+function openModal(productId) {
+  selectedProduct = products.find((p) => p.id === productId);
+  if (!selectedProduct) return;
+  selectedMaterial = null;
+  selectedShape = null;
+  uploadedImageUrl = null;
+
+  document.getElementById("modal-title").textContent = selectedProduct.name;
+  document.getElementById("modal-qty").value = 1;
+  document.getElementById("upload-preview").classList.add("hidden");
+
+  // Show image required indicator for customisable products
+  const uploadLabel = document.getElementById("upload-label");
+  if (selectedProduct.is_customizable) {
+    uploadLabel.textContent = "Your Custom Design (required) *";
+    uploadLabel.style.color = "var(--accent-light)";
+  } else {
+    uploadLabel.textContent = "Custom Image (optional)";
+    uploadLabel.style.color = "";
+  }
+
+  // Variants
+  const hasVariants = selectedProduct.variants && selectedProduct.variants.length > 0;
+  const varSection = document.getElementById("variant-section");
+  varSection.classList.toggle("hidden", !hasVariants);
+
+  if (hasVariants) {
+    const materials = [...new Set(selectedProduct.variants.filter(v => v.material).map(v => v.material))];
+    const shapes    = [...new Set(selectedProduct.variants.filter(v => v.shape).map(v => v.shape))];
+
+    const matDiv = document.getElementById("material-chips");
+    const shapeDiv = document.getElementById("shape-chips");
+    document.getElementById("shape-group").classList.toggle("hidden", shapes.length === 0);
+
+    matDiv.innerHTML = materials.map(m => `
+      <div class="variant-chip" data-material="${m}" onclick="selectMaterial('${m}')">${m}</div>
+    `).join("");
+    shapeDiv.innerHTML = shapes.map(s => `
+      <div class="variant-chip" data-shape="${s}" onclick="selectShape('${s}')">${s.replace(/_/g," ")}</div>
+    `).join("");
+  }
+
+  updateModalPrice();
+  document.getElementById("product-modal").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("product-modal").classList.remove("open");
+}
+
+function selectMaterial(m) {
+  selectedMaterial = m;
+  document.querySelectorAll("#material-chips .variant-chip").forEach(c => {
+    c.classList.toggle("selected", c.dataset.material === m);
+  });
+  updateModalPrice();
+}
+
+function selectShape(s) {
+  selectedShape = s;
+  document.querySelectorAll("#shape-chips .variant-chip").forEach(c => {
+    c.classList.toggle("selected", c.dataset.shape === s);
+  });
+  updateModalPrice();
+}
+
+function getSelectedVariant() {
+  if (!selectedProduct || !selectedProduct.variants?.length) return null;
+  return selectedProduct.variants.find(v =>
+    (v.material === selectedMaterial || !v.material) &&
+    (v.shape === selectedShape || !v.shape)
+  ) || null;
+}
+
+function updateModalPrice() {
+  if (!selectedProduct) return;
+  const variant = getSelectedVariant();
+  const price = selectedProduct.base_price + (variant?.price_modifier ?? 0);
+  document.getElementById("modal-price").textContent = formatINR(price);
+}
+
+// ── Image upload ─────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  const zone = document.getElementById("upload-zone");
+  const input = document.getElementById("image-input");
+
+  zone.addEventListener("click", () => input.click());
+  zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("dragover"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+  zone.addEventListener("drop", (e) => {
+    e.preventDefault(); zone.classList.remove("dragover");
+    if (e.dataTransfer.files[0]) handleImageFile(e.dataTransfer.files[0]);
+  });
+  input.addEventListener("change", () => { if (input.files[0]) handleImageFile(input.files[0]); });
+});
+
+async function handleImageFile(file) {
+  if (file.size > 5 * 1024 * 1024) { toast("Image must be under 5 MB", "error"); return; }
+  const preview = document.getElementById("upload-preview");
+  preview.src = URL.createObjectURL(file);
+  preview.classList.remove("hidden");
+
+  try {
+    showLoading();
+    const fd = new FormData();
+    fd.append("image", file);
+    const res = await fetch(API_BASE + "/api/upload-image", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    uploadedImageUrl = data.url;
+    toast("Image uploaded!", "success");
+  } catch (e) {
+    toast("Upload failed: " + e.message, "error");
+    uploadedImageUrl = null;
+  } finally {
+    hideLoading();
+  }
+}
+
+// ── Add to cart ──────────────────────────────────────────────────────────────
+function addToCartFromModal() {
+  if (!selectedProduct) return;
+  const variant = getSelectedVariant();
+  const hasVariants = selectedProduct.variants?.length > 0;
+  if (hasVariants && !variant) {
+    toast("Please select a variant", "error"); return;
+  }
+  // For customisable products, image is required
+  if (selectedProduct.is_customizable && !uploadedImageUrl) {
+    toast("Please upload your custom image first", "error"); return;
+  }
+  const qty = parseInt(document.getElementById("modal-qty").value) || 1;
+  const price = selectedProduct.base_price + (variant?.price_modifier ?? 0);
+  const variantLabel = variant
+    ? [variant.material, variant.shape].filter(Boolean).map(s => s.replace(/_/g," ")).join(" · ")
+    : "";
+
+  Cart.add({
+    product_id: selectedProduct.id,
+    product_name: selectedProduct.name,
+    category: selectedProduct.category,
+    variant_id: variant?.id ?? null,
+    variant_label: variantLabel,
+    price,
+    image_url: uploadedImageUrl,
+  });
+
+  // update qty directly
+  const items = Cart.getAll();
+  const idx = items.findIndex(i => i.product_id === selectedProduct.id && i.variant_id === (variant?.id ?? null));
+  if (idx !== -1 && qty > 1) { Cart.updateQty(idx, qty); }
+
+  toast(`${selectedProduct.name} added to cart!`, "success");
+  closeModal();
+}
+
+loadProducts();
+</script>
+</body>
+</html>

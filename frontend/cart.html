@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cart – Abstract Realms</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">Abstract Realms</a>
+    <nav>
+      <a href="index.html">Shop</a>
+      <a href="cart.html" class="cart-link">
+        Cart
+        <span class="cart-badge" style="display:none">0</span>
+      </a>
+    </nav>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container">
+    <h2 style="margin-bottom:32px">Your Cart</h2>
+
+    <!-- Empty state -->
+    <div id="empty-cart" class="empty-state hidden">
+      <div class="icon">🛒</div>
+      <p>Your cart is empty.</p>
+      <a href="index.html" class="btn btn-primary mt-4">Browse Products</a>
+    </div>
+
+    <!-- Cart table -->
+    <div id="cart-content" class="hidden">
+      <div style="overflow-x:auto">
+        <table class="cart-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Variant</th>
+              <th>Custom Image</th>
+              <th>Unit Price</th>
+              <th>Qty</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cart-rows"></tbody>
+        </table>
+      </div>
+
+      <div class="cart-summary">
+        <div class="row">
+          <span class="text-muted">Subtotal</span>
+          <span id="summary-sub">₹0</span>
+        </div>
+        <div class="row">
+          <span class="text-muted">Shipping</span>
+          <span class="text-success">Free</span>
+        </div>
+        <div class="row">
+          <strong>Total</strong>
+          <strong id="summary-total">₹0</strong>
+        </div>
+        <a href="checkout.html" class="btn btn-primary btn-block mt-4">Proceed to Checkout</a>
+        <button class="btn btn-outline btn-block mt-4" onclick="clearCart()">Clear Cart</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="toast-container"></div>
+<script src="script.js"></script>
+<script>
+function renderCart() {
+  const items = Cart.getAll();
+  const emptyEl = document.getElementById("empty-cart");
+  const contentEl = document.getElementById("cart-content");
+
+  if (!items.length) {
+    emptyEl.classList.remove("hidden");
+    contentEl.classList.add("hidden");
+    return;
+  }
+  emptyEl.classList.add("hidden");
+  contentEl.classList.remove("hidden");
+
+  const tbody = document.getElementById("cart-rows");
+  tbody.innerHTML = items.map((item, i) => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:1.8rem">${categoryEmoji(item.category)}</span>
+          <div>
+            <div style="font-weight:600">${item.product_name}</div>
+            <div class="text-muted" style="font-size:.78rem">${item.category}</div>
+          </div>
+        </div>
+      </td>
+      <td class="text-muted">${item.variant_label || '—'}</td>
+      <td>
+        ${item.image_url
+          ? `<a href="${item.image_url}" target="_blank">
+               <img src="${item.image_url}" style="width:48px;height:48px;object-fit:cover;border-radius:6px" />
+             </a>`
+          : '<span class="text-muted">None</span>'}
+      </td>
+      <td>${formatINR(item.price)}</td>
+      <td>
+        <div class="qty-control">
+          <button onclick="changeQty(${i}, ${item.quantity - 1})">−</button>
+          <span>${item.quantity}</span>
+          <button onclick="changeQty(${i}, ${item.quantity + 1})">+</button>
+        </div>
+      </td>
+      <td style="font-weight:600">${formatINR(item.price * item.quantity)}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="removeItem(${i})">Remove</button>
+      </td>
+    </tr>
+  `).join("");
+
+  const total = Cart.total();
+  document.getElementById("summary-sub").textContent = formatINR(total);
+  document.getElementById("summary-total").textContent = formatINR(total);
+}
+
+function changeQty(index, qty) {
+  Cart.updateQty(index, qty);
+  renderCart();
+}
+
+function removeItem(index) {
+  Cart.remove(index);
+  renderCart();
+  toast("Item removed", "info");
+}
+
+function clearCart() {
+  if (!confirm("Clear your entire cart?")) return;
+  Cart.clear();
+  renderCart();
+}
+
+renderCart();
+</script>
+</body>
+</html>
